@@ -1,8 +1,10 @@
-# ProjektDBVBA
+' ProjektDBVBA
 Option Compare Database
 
 
-'Tabelle Abteilung, Mitkreis, typeFzgGrp Const dateipfad = "D:\DantenbankAccess\Abschlussphase" Const xlBlattName As String = "Tabelle1"
+'Tabelle Abteilung, Mitkreis, typeFzgGrp
+Const dateipfad = "D:\DantenbankAccess\Abschlussphase"
+Const xlBlattName As String = "Tabelle1"
 
 Private Type typeAbteilung
 kuerzel As String
@@ -29,6 +31,12 @@ kstelle As String
 
 End Type
 
+Private Type VerknuepftMitFzgGrp
+    lngMitID As Long
+    lngGrpID As Long
+End If
+
+Private VerknuepftMitFzgGrpXLSXdata() As VerknuepftMitFzgGrp
 Private AbtXLSXdata() As typeAbteilung
 Private MitKreisXLSXdata() As typeMitKreis
 Private FzgGrpXLSXdata() As typeFzgGp
@@ -109,6 +117,7 @@ xlsApp.Workbooks.Open xlpfad, , True
     ReDim MitKreisXLSXdata(1 To XLSXmax)
     ReDim FzgGrpXLSXdata(1 To XLSXmax)
     ReDim MitarbeiterXLSXdata(1 To XLSXmax)
+    ReDim VerknuepftMitFzgGrpXLSXdata(1 To XLSXmax)
     
     With xlsApp.Worksheets(xlBlattName)
         For i = 1 To XLSXmax
@@ -145,6 +154,7 @@ Dim sSQLGrp As String
 Dim sSQLMit As String
 Dim sSQLStNr As String
 Dim sSQLKst As String
+Dim sSQLMitGp As String
 
 Dim abtID As Long, grpID As Long, kreisID As Long, mitID As Long, reID As Long, StammNrID, kstID
 Dim MsgAntw As Integer
@@ -155,73 +165,81 @@ For i = 1 To XLSXmax
     StammNrID = Nz(DLookup("MitID", "tblStammnummer", "StammNr = " & MitarbeiterXLSXdata(i).personalnr))
     kstID = Nz(DLookup("KstID", "tblKostenstelle", "Kst = '" & MitarbeiterXLSXdata(i).kstelle & "'"))
     
-    abtID = Nz(DMax("AbtID", "tblAbteilung", "kuerzel= '" & AbtXLSXdata(i).kuerzel & "'"))
-    kreisID = Nz(DMax("MitKreisID", "tblMitKreis", "MitKreis= '" & MitKreisXLSXdata(i).mitKreis & "'"))
-    grpID = Nz(DMax("FzgGrpID", "tblFzgGrp", "FzgGrp= '" & FzgGrpXLSXdata(i).fzgGrp & "'"))
-    mitID = Nz(DMax("MitID", "tblMitarbeiter", "DKXKennung= '" & MitarbeiterXLSXdata(i).dKXKennung & "'"))
-    
-    sSQLAbt = "INSERT INTO tblAbteilung (kuerzel ) VALUES ('" & AbtXLSXdata(i).kuerzel & "');"
-    
-    sSQLKreis = "INSERT INTO tblMitKreis (MitKreis ) VALUES ('" & MitKreisXLSXdata(i).mitKreis & "');"
-    
-    sSQLGrp = "INSERT INTO tblFzgGrp (FzgGrp) VALUES ('" & FzgGrpXLSXdata(i).fzgGrp & "');"
-    
-    sSQLMit = "INSERT INTO tblMitarbeiter (Nachname,Vorname, DKX-Kennung,Email-Adresse, MitKreisID) " & _
-    "VALUES('" & MitarbeiterXLSXdata(i).nachname & "', '" & MitarbeiterXLSXdata(i).vorname & "','" & _
-    MitarbeiterXLSXdata(i).dKXKennung & "','" & MitarbeiterXLSXdata(i).email & "','" & MitarbeiterXLSXdata(i).mitKreis & "');"
-    
-    sSQLKst = "INSERT INTO tblKostenstelle (Kostenstelle, AbtID) " & _
-    "VALUES ('" & MitarbeiterXLSXdata(i).kstelle & "', '" & AbtXLSXdata(i).kuerzel & "');"
-    
-    sSQLStNr = "INSERT INTO tblStammnummer (StammNr, ReID, KstID) " & _
-    "VALUES ('" & MitarbeiterXLSXdata(i).stammNr & "', '" & MitarbeiterXLSXdata(i).re & "', '" & _
-    MitarbeiterXLSXdata(i).kstelle & "');"
+    abtID = Nz(DLookup("AbtID", "tblAbteilung", "kuerzel= '" & AbtXLSXdata(i).kuerzel & "'"))
+    kreisID = Nz(DLookup("MitKreisID", "tblMitKreis", "MitKreis= '" & MitKreisXLSXdata(i).mitKreis & "'"))
+    grpID = Nz(DLookup("FzgGrpID", "tblFzgGrp", "FzgGrp= '" & FzgGrpXLSXdata(i).fzgGrp & "'"))
+    mitID = Nz(DLookup("MitID", "tblMitarbeiter", "DKXKennung= '" & MitarbeiterXLSXdata(i).dKXKennung & "'"))
     
     
-    Debug.Print sSQLAbt
-    Debug.Print sSQLKreis
-    Debug.Print sSQLGrp
+'    Debug.Print sSQLAbt
+'    Debug.Print sSQLKreis
+'    Debug.Print sSQLGrp
     
     DoCmd.SetWarnings False
 
 
 '1.######################################## tblMitKreis #################################################
     If kreisID = 0 Then
+        sSQLKreis = "INSERT INTO tblMitKreis (MitKreis ) VALUES ('" & MitKreisXLSXdata(i).mitKreis & "');"
         DoCmd.RunSQL sSQLKreis
-        kreisID = Nz(DMax("MitKreisID", "tblMitKreis", "MitKreis= '" & MitKreisXLSXdata(i).mitKreis & "'"))
+        kreisID = Nz(DLookup("MitKreisID", "tblMitKreis", "MitKreis= '" & MitKreisXLSXdata(i).mitKreis & "'"))
 
     End If
 
 '2.######################################## tblfzgGrp #################################################
     If grpID = 0 Then
+        sSQLGrp = "INSERT INTO tblFzgGrp (FzgGrp) VALUES ('" & FzgGrpXLSXdata(i).fzgGrp & "');"
         DoCmd.RunSQL sSQLGrp
-        grpID = Nz(DMax("FzgGrpID", "tblFzgGrp", "FzgGrp= '" & FzgGrpXLSXdata(i).fzgGrp & "'"))
+        grpID = Nz(DLookup("FzgGrpID", "tblFzgGrp", "FzgGrp= '" & FzgGrpXLSXdata(i).fzgGrp & "'"))
         
     End If
 
-'3.######################################## tblMitarbeiter #################################################
-    If mitID = 0 Then
-        DoCmd.RunSQL sSQLMit
-        grpID = Nz(DMax("FzgGrpID", "tblFzgGrp", "FzgGrp= '" & FzgGrpXLSXdata(i).fzgGrp & "'"))
-        
-    End If
-
-'4.######################################## tblVerkMitar #################################################
-     If mitID = 0 Then
-        DoCmd.RunSQL sSQLStNr
-        grpID = Nz(DMax("FzgGrpID", "tblFzgGrp", "FzgGrp= '" & FzgGrpXLSXdata(i).fzgGrp & "'"))
-        
-    End If
-
-'5.######################################## tblAbteilung #################################################
+'3.######################################## tblAbteilung #################################################
     If abtID = 0 Then
+     sSQLAbt = "INSERT INTO tblAbteilung (kuerzel ) VALUES ('" & AbtXLSXdata(i).kuerzel & "');"
         DoCmd.RunSQL sSQLAbt
+     abtID = Nz(DLookup("AbtID", "tblAbteilung", "kuerzel= '" & AbtXLSXdata(i).kuerzel & "'"))
     End If
 
+
+'4.######################################## tblMitarbeiter #################################################
+     ' Abteilungskuerzel mit den Schlüsselwerten in Variablen ersetzen
+    lngMitKreis = MitarbeiterXLSXdata(i).mitKreis
+    If mitID = 0 Then
+         sSQLMit = "INSERT INTO tblMitarbeiter (Nachname,Vorname, DKX-Kennung,Email-Adresse, MitKreisID) " & _
+        "VALUES('" & MitarbeiterXLSXdata(i).nachname & "', '" & MitarbeiterXLSXdata(i).vorname & "','" & _
+        MitarbeiterXLSXdata(i).dKXKennung & "','" & MitarbeiterXLSXdata(i).email & "'," & MitarbeiterXLSXdata(i).lngMitKreis & ");"
+    
+        DoCmd.RunSQL sSQLMit
+        mitID = Nz(DLookup("MitID", "tblMitarbeiter", "DKXKennung= '" & MitarbeiterXLSXdata(i).dKXKennung & "'"))
+        
+    End If
+
+'5.######################################## tblVerkMitar #################################################
+    lngGrpID = FzgGrpXLSXdata(i).fzgGrp
+     If mitID = 0 And grpID = 0 Then
+        sSQLMit = "INSERT INTO tblVerknüpftMit_FzgGrp (MitID,FzgGrpID) " & _
+        "VALUES(" & VerknuepftMitFzgGrpXLSXdata(i).lngMitID & "," & VerknuepftMitFzgGrpXLSXdata(i).lngGrpID & ");"
+        DoCmd.RunSQL sSQLStNr
+        '*****************grpID = Nz(DLookup("FzgGrpID", "tblVerknüpftMit_FzgGrp", "FzgGrp= " & FzgGrpXLSXdata(i). & ""))
+        
+    End If
 
 '6######################################## tblKostenstelle #################################################
-
+    If kstID = 0 Then
+        sSQLKst = "INSERT INTO tblKostenstelle (Kostenstelle, AbtID) " & _
+        "VALUES ('" & MitarbeiterXLSXdata(i).kstelle & "', '" & AbtXLSXdata(i).kuerzel & "');" '********************
+        DoCmd.RunSQL sSQLKst
+        '**************kstID = Nz(DLookup("KstID", "tblKostenstelle", "Kst= '" & MitarbeiterXLSXdata(i). & "'"))
+        
+    End If
 '7######################################## tblStammnummer #################################################
+    If StammNrID = 0 Then
+        sSQLStNr = "INSERT INTO tblStammnummer (StammNr, ReID, KstID) " & _
+        "VALUES ('" & MitarbeiterXLSXdata(i).stammNr & "', '" & MitarbeiterXLSXdata(i).re & "', '" & _
+        MitarbeiterXLSXdata(i).kstelle & "');"
+        DoCmd.RunSQL sSQLStNr
+    End If
 DoCmd.SetWarnings True
 Next i
 
@@ -232,213 +250,3 @@ Private Sub test()
 Call ImportDaten
 Call WriteXLSXDaten
 End Sub
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
