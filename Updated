@@ -1,0 +1,519 @@
+ Option Compare Database
+ Option Explicit
+'Tabelle Abteilung, Mitkreis, typeFzgGrp
+Const dateipfad = "D:\DantenbankAccess\Abschlussphase"
+Const xlBlattName As String = "Tabelle1"
+Private Type FrzStruc
+    fin As String
+    grundPreis As Double
+    austattungWert As Double
+    fzgStatus As String
+End Type
+Private Type MitdatenStruc
+    stammNr As Long
+    mitarbeiterName As String
+    mitarbeitervorname As String
+    abteilung As String
+    dwGruppe As String
+    kostenstelle As String
+    re As String
+    dienstwagenNz As String
+End Type
+Private Type FrzModellStruc
+    modellBzg As String
+    modellName As String
+    herstName As String
+    kraftstoff As String
+    
+End Type
+Private Type LeasingStruc
+    vertragsende As Date
+    dLLeasingRate As Double
+    leasingNr As String
+    kennzeichen As String
+    vertragsdauer As Integer
+    kmStand As Long
+    datEz As Date
+    rueckgabeDat As Date
+    netLeasingrate As Double
+    abmeldeDat As Date
+    auslieferungDat As Date
+End Type
+Private Type VerkaufStruc
+    verkaufDat As Date
+    verkPreis As Double
+    verkaufNr As String
+    hofNr As String
+    kmStand As Long
+    schaeden As Double
+    uebernahmeDat As Date
+    gisUebernahme As Boolean
+End Type
+Private Type BestellungStruc
+    bestellNr As String
+    bestelldat As Date
+    kfzbrief As String
+    rechnungDat As Date
+    anlieferungDat As Date
+End Type
+   
+   
+Private FzgXLSXdata() As FrzStruc
+Private MitXLSXdata() As MitdatenStruc
+Private FzgModellXLSXdata() As FrzModellStruc
+Private BestellungXLSXdata() As BestellungStruc
+Private LeasingXLSXdata() As LeasingStruc
+Private VerkaufXLSXdata() As VerkaufStruc
+'Anzahl Zeilen in Excel Tabelle
+Private XLSXmax As Integer
+
+'############################
+'##########################
+Private Sub test()
+Call ImportDaten
+Call WriteXLSXDaten
+Call CloseXLSXApp(True)
+End Sub
+'############################
+'############################
+
+
+Private Sub ImportDaten()
+Dim xlpfad As String
+xlpfad = dateipfad & "\FzgAll.xlsx"
+Dim vFin As Variant, vGrundPreis, vAustattungWert, vFzgStatus
+Dim vStammNr As Variant, vAbteilung, vDwGruppe, vKostenstelle, vRe, vDienstwagenNz
+Dim vModellBzg As Variant, vHerstName, vModellName, vKraftstoff
+Dim vBestellNr, vBestelldat, vKfzBrief, vRechnungDat, vAnlieferungDat
+Dim vDLLeasingRate As Variant, vLeasingNr, vKennzeichen, vVertragsdauer, vKiloStand, vDatEz, vVertragsende
+Dim vRueckgabeDat As Variant, vNetLesingrate, vAbmeldeDat
+Dim vVerkaufDat As Variant, vHofNr, vSchaeden, vVerkPreis, vUebernahmeDat, vAuslieferungDat
+
+Dim i As Long, iRowS As Integer, iRowL As Long
+Dim iCol As Integer, sCol As String
+' Verweis auf Excel-Bibliothek muss gesetzt sein
+Dim xlsApp As Excel.Application
+Dim Blatt As Excel.Worksheet
+Dim MsgAntw As Integer
+Dim dienstwagenNz As String
+
+' Konstante: Name des einzulesenden Arbeitsblattes
+' Excel vorbereiten
+On Error Resume Next
+Set xlsApp = GetObject(, "Excel.Application")
+If xlsApp Is Nothing Then
+    Set xlsApp = CreateObject("Excel.Application")
+End If
+On Error GoTo 0
+' Exceldatei readonly öffnen
+xlsApp.Workbooks.Open xlpfad, , True
+    ' Erste Zeile wird statisch angegeben
+    iRowS = 2
+    With xlsApp.Worksheets(xlBlattName)
+    ' Letzte Zeile auf Tabellenblatt wird dynamisch ermittelt
+        iRowL = .Cells(xlsApp.Rows.Count, 1).End(xlUp).Row
+     
+        'xlBlattName excel Datei FzgAllMitKunde.xslx
+        'Stammnummer
+        sCol = "A"
+        vStammNr = .Range(sCol & iRowS & ":" & sCol & iRowL)
+
+        'Dienstwagennutzer
+        sCol = "B"
+        vDienstwagenNz = .Range(sCol & iRowS & ":" & sCol & iRowL)
+        'Abteilung
+        sCol = "C"
+        vAbteilung = .Range(sCol & iRowS & ":" & sCol & iRowL)
+
+        'DWGruppe
+        sCol = "D"
+        vDwGruppe = .Range(sCol & iRowS & ":" & sCol & iRowL)
+        'Kostenstelle
+        sCol = "E"
+        vKostenstelle = .Range(sCol & iRowS & ":" & sCol & iRowL)
+        'Rechtseinheit
+        sCol = "F"
+        vRe = .Range(sCol & iRowS & ":" & sCol & iRowL)
+        'Fahrzeug-Identifikationsnummer
+        sCol = "G"
+        vFin = .Range(sCol & iRowS & ":" & sCol & iRowL)
+        'Modell/Typ
+        sCol = "H"
+        vModellName = .Range(sCol & iRowS & ":" & sCol & iRowL)
+        'HERSTNAME
+        sCol = "I"
+        vHerstName = .Range(sCol & iRowS & ":" & sCol & iRowL)
+        'Grundpreis
+        sCol = "J"
+        'Debug.Print
+        vGrundPreis = .Range(sCol & iRowS & ":" & sCol & iRowL)
+        ' ModellNr
+        sCol = "K"
+        vModellBzg = .Range(sCol & iRowS & ":" & sCol & iRowL)
+        'Bestellnummer
+        sCol = "L"
+        vBestellNr = .Range(sCol & iRowS & ":" & sCol & iRowL)
+        'Bestelldatum
+        sCol = "M"
+        vBestelldat = .Range(sCol & iRowS & ":" & sCol & iRowL)
+        'Kraftfahrzeugbriefnummer
+        sCol = "N"
+        vKfzBrief = .Range(sCol & iRowS & ":" & sCol & iRowL)
+        'Rechnungsdatum
+        sCol = "O"
+        vRechnungDat = .Range(sCol & iRowS & ":" & sCol & iRowL)
+        'Status
+        sCol = "P"
+        vFzgStatus = .Range(sCol & iRowS & ":" & sCol & iRowL)
+        'Vertragsende
+        sCol = "Q"
+        vVertragsende = .Range(sCol & iRowS & ":" & sCol & iRowL)
+        'DL Leasing Rate
+        sCol = "R"
+        vDLLeasingRate = .Range(sCol & iRowS & ":" & sCol & iRowL)
+        'Leasing Vertragsnummer
+        sCol = "S"
+        vLeasingNr = .Range(sCol & iRowS & ":" & sCol & iRowL)
+        'amtl. KFZ Kennzeichen
+        sCol = "T"
+        vKennzeichen = .Range(sCol & iRowS & ":" & sCol & iRowL)
+        'Vertragsdauer
+        sCol = "U"
+        vVertragsdauer = .Range(sCol & iRowS & ":" & sCol & iRowL)
+        'Kilometer-Stand
+        sCol = "V"
+        vKiloStand = .Range(sCol & iRowS & ":" & sCol & iRowL)
+        'Datum EZ
+        sCol = "W"
+        vDatEz = .Range(sCol & iRowS & ":" & sCol & iRowL)
+        'Fahrzeug ins GIS übernommen
+    '    sCol = "X"
+    '    vUebernahme = .Range(sCol & iRowS & ":" & sCol & iRowL)
+        'ÜbernahmeDatum
+        sCol = "Y"
+        vUebernahmeDat = .Range(sCol & iRowS & ":" & sCol & iRowL)
+        'Rueckgabedatum
+        sCol = "Z"
+        vRueckgabeDat = .Range(sCol & iRowS & ":" & sCol & iRowL)
+        'Netto-Leasingrate
+        sCol = "AA"
+        vNetLesingrate = .Range(sCol & iRowS & ":" & sCol & iRowL)
+        'Kaufinteresse
+    '    sCol = "AB"
+    '    vKaufinteresse = .Range(sCol & iRowS & ":" & sCol & iRowL)
+        'Verkaufsdatum
+        sCol = "AC"
+        vVerkaufDat = .Range(sCol & iRowS & ":" & sCol & iRowL)
+        'Anlieferungsdatum
+        sCol = "AD"
+        vAnlieferungDat = .Range(sCol & iRowS & ":" & sCol & iRowL)
+        'Schäden
+        sCol = "AE"
+        vSchaeden = .Range(sCol & iRowS & ":" & sCol & iRowL)
+        'Abmeldatum
+        sCol = "AF"
+        vAbmeldeDat = .Range(sCol & iRowS & ":" & sCol & iRowL)
+        'Wert der Ausstattung
+        sCol = "AG"
+        vAustattungWert = .Range(sCol & iRowS & ":" & sCol & iRowL)
+        'Verkaufpreis
+        sCol = "AG"
+        vVerkPreis = .Range(sCol & iRowS & ":" & sCol & iRowL)
+        'Motor
+        sCol = "AI"
+        vKraftstoff = .Range(sCol & iRowS & ":" & sCol & iRowL)
+        'Aktennummer/Hofnummer
+        sCol = "AJ"
+        vHofNr = .Range(sCol & iRowS & ":" & sCol & iRowL)
+    End With
+    '--------------------
+    ' Werte in globaler Variable speichern
+    XLSXmax = iRowL - 1
+    ReDim FzgXLSXdata(1 To XLSXmax)
+    ReDim MitXLSXdata(1 To XLSXmax)
+    ReDim LeasingXLSXdata(1 To XLSXmax)
+    ReDim BestellungXLSXdata(1 To XLSXmax)
+    ReDim VerkaufXLSXdata(1 To XLSXmax)
+    ReDim FzgModellXLSXdata(1 To XLSXmax)
+  
+'Set xlsApp = Nothing
+        For i = 1 To XLSXmax
+            FzgXLSXdata(i).fin = vFin(i, 1)
+            FzgXLSXdata(i).grundPreis = vGrundPreis(i, 1)
+            FzgXLSXdata(i).austattungWert = vAustattungWert(i, 1)
+            FzgXLSXdata(i).fzgStatus = vFzgStatus(i, 1)
+           
+            MitXLSXdata(i).abteilung = vAbteilung(i, 1)
+            MitXLSXdata(i).dwGruppe = vDwGruppe(i, 1)
+            MitXLSXdata(i).kostenstelle = vKostenstelle(i, 1)
+            MitXLSXdata(i).re = vRe(i, 1)
+            If MitXLSXdata(i).re = "VB" Then
+               MitXLSXdata(i).re = "Volkswagen Bank GmbH"
+            ElseIf MitXLSXdata(i).re = "VF" Or MitXLSXdata(i).re = "VL" Then
+               MitXLSXdata(i).re = "VW Financial Services AG"
+            End If
+         
+            MitXLSXdata(i).stammNr = vStammNr(i, 1)
+            dienstwagenNz = vDienstwagenNz(i, 1)
+            'splitten Name und Vorname des Dienstwagenbenutzer
+            MitXLSXdata(i).mitarbeiterName = Mid(dienstwagenNz, 1, InStr(1, dienstwagenNz, ",", vbTextCompare) - 1)
+            MitXLSXdata(i).mitarbeitervorname = Mid(dienstwagenNz, InStr(1, dienstwagenNz, ",", vbTextCompare) + 1, Len(dienstwagenNz))
+           
+            FzgModellXLSXdata(i).herstName = vHerstName(i, 1)
+            FzgModellXLSXdata(i).kraftstoff = vKraftstoff(i, 1)
+            FzgModellXLSXdata(i).modellBzg = vModellBzg(i, 1)
+            FzgModellXLSXdata(i).modellName = vModellName(i, 1)
+           
+            LeasingXLSXdata(i).abmeldeDat = vAbmeldeDat(i, 1)
+            LeasingXLSXdata(i).datEz = vDatEz(i, 1)
+            LeasingXLSXdata(i).dLLeasingRate = vDLLeasingRate(i, 1)
+            LeasingXLSXdata(i).kennzeichen = vKennzeichen(i, 1)
+            LeasingXLSXdata(i).kmStand = vKiloStand(i, 1)
+            LeasingXLSXdata(i).leasingNr = vLeasingNr(i, 1)
+            LeasingXLSXdata(i).netLeasingrate = vNetLesingrate(i, 1)
+            LeasingXLSXdata(i).rueckgabeDat = vRueckgabeDat(i, 1)
+            LeasingXLSXdata(i).vertragsdauer = vVertragsdauer(i, 1)
+            LeasingXLSXdata(i).vertragsende = vVertragsende(i, 1)
+            LeasingXLSXdata(i).auslieferungDat = vAuslieferungDat
+           
+            BestellungXLSXdata(i).anlieferungDat = vAnlieferungDat(i, 1)
+            BestellungXLSXdata(i).bestelldat = vBestelldat(i, 1)
+            BestellungXLSXdata(i).bestellNr = vBestellNr(i, 1)
+            BestellungXLSXdata(i).kfzbrief = vKfzBrief(i, 1)
+            BestellungXLSXdata(i).rechnungDat = vRechnungDat(i, 1)
+           
+            'VerkaufXLSXdata(i).gisUebernahme = vGisUebernahme(i, 1)
+            VerkaufXLSXdata(i).hofNr = vHofNr(i, 1)
+            VerkaufXLSXdata(i).kmStand = vKiloStand(i, 1)
+            VerkaufXLSXdata(i).schaeden = vSchaeden(i, 1)
+            VerkaufXLSXdata(i).uebernahmeDat = vUebernahmeDat(i, 1)
+            VerkaufXLSXdata(i).verkaufDat = vVerkaufDat(i, 1)
+            VerkaufXLSXdata(i).verkPreis = vVerkPreis(i, 1)
+           
+        Next i
+ 
+Set xlsApp = Nothing
+End Sub
+Private Sub WriteXLSXDaten()
+' Daten aus Variable in Tabelle übertragen
+Dim i As Integer
+'Dim lngMitKreisID As Long
+Dim sSQL As String
+Dim bestellID As Long, statusID As Long, herstID As Long, kraftID As Long, fzgModellID As Long, fzgID As Long
+Dim mitId As Long, reID As Long, kstID As Long, abtID As Long, dwgrpID As Long, leasID As Long, vkID As Long
+Dim MsgAntw As Integer
+' Schleife über alle Datensätze in der Variablen
+For i = 1 To XLSXmax
+    ' SQL-String erstellen und Daten schreiben
+ 
+ 
+    statusID = Nz(DLookup("StatusID", "tblFzgStatus", "Status = '" & FzgXLSXdata(i).fzgStatus & "'"), 0)
+    herstID = Nz(DLookup("HerstID", "tblHersteller", "HerstName = '" & FzgModellXLSXdata(i).herstName & "'"), 0)
+    kraftID = Nz(DLookup("KraftID", "tblKraftstoff", "Kraftstoffart= '" & FzgModellXLSXdata(i).kraftstoff & "'"), 0)
+    reID = Nz(DLookup("REID", "tblRechtseinheit", "RE = '" & MitXLSXdata(i).re & "'"), 0)
+    kstID = Nz(DLookup("KstID", "tblKostenstelle", "Kostenstelle = '" & MitXLSXdata(i).kostenstelle & "'"), 0)
+    abtID = Nz(DLookup("AbtID", "tblAbteilung", "Abteilung = '" & MitXLSXdata(i).abteilung & "'"), 0)
+    
+ 
+ 
+    fzgModellID = Nz(DLookup("FzgModellID", "tblFzgModell", "ModellNr= '" & FzgModellXLSXdata(i).modellBzg & "'"), 0) 'wenn der ModellNr 2 oder +mal vorkommen, werden einige Daten nicht gespeichert
+    fzgID = Nz(DLookup("FzgID", "tblFzg", "FahrgestellNr= '" & FzgXLSXdata(i).fin & "'"), 0)
+    
+    
+
+    
+    
+    DoCmd.SetWarnings False
+    
+
+'1.######################################## tblfzgGrp #################################################
+    dwgrpID = DLookup("FzgGrpID", "tblFzgGrp", "FzgGrp ='" & MitXLSXdata(i).dwGruppe & "'")
+    If dwgrpID = 0 Then
+        sSQL = "INSERT INTO tblFzgGrp (FzgGrp) VALUES ('" & MitXLSXdata(i).dwGruppe & "');"
+        DoCmd.RunSQL sSQL
+        dwgrpID = DLookup("FzgGrpID", "tblFzgGrp", "FzgGrp ='" & MitXLSXdata(i).dwGruppe & "'")
+    End If
+    
+'2.######################################## tblRE #################################################
+    If reID = 0 Then
+        sSQL = "INSERT INTO tblRechtseinheit (RE ) VALUES ('" & MitXLSXdata(i).re & "');"
+        DoCmd.RunSQL sSQL
+        reID = Nz(DLookup("REID", "tblRechtseinheit", "RE= '" & MitXLSXdata(i).re & "'"))
+
+    End If
+
+
+'3.######################################## tblAbteilung #################################################
+    If abtID = 0 Then
+     sSQL = "INSERT INTO tblAbteilung (Abteilung ) VALUES ('" & MitXLSXdata(i).abteilung & "');"
+        DoCmd.RunSQL sSQL
+     abtID = Nz(DLookup("AbtID", "tblAbteilung", "Abteilung= '" & MitXLSXdata(i).abteilung & "'"))
+    End If
+
+'4.######################################## tblStatus #################################################
+    If statusID = 0 Then
+        sSQL = "INSERT INTO tblFzgStatus (Status) VALUES ('" & FzgXLSXdata(i).fzgStatus & "');"
+        DoCmd.RunSQL sSQL
+        Debug.Print sSQL
+        statusID = Nz(DLookup("StatusID", "tblFzgStatus", "Status= '" & FzgXLSXdata(i).fzgStatus & "'"))
+     
+    End If
+ 
+'5.#########################################tblDienstwagennutzer##########################################
+    mitId = Nz(DLookup("MitID", "tblMitarbeiter", "StammNr= " & MitXLSXdata(i).stammNr), 0)
+
+    If mitId = 0 Then
+        sSQL = "INSERT INTO tblMitarbeiter(Nachname, Vorname, StammNr, ReID, KstID )VALUES('" & _
+         MitXLSXdata(i).mitarbeiterName & "','" & MitXLSXdata(i).mitarbeitervorname & "'," & MitXLSXdata(i).stammNr & _
+         ", " & reID & ", " & kstID & " );"
+         Debug.Print sSQL
+        DoCmd.RunSQL sSQL
+      mitId = Nz(DLookup("MitID", "tblMitarbeiter", "StammNr= " & MitXLSXdata(i).stammNr & ""))
+    End If
+ 
+'6.######################################## tblHersteller #################################################
+    If herstID = 0 Then
+     sSQL = "INSERT INTO tblHersteller (HerstName ) VALUES ('" & FzgModellXLSXdata(i).herstName & "');"
+        DoCmd.RunSQL sSQL
+     herstID = Nz(DLookup("HerstID", "tblHersteller", "HerstName= '" & FzgModellXLSXdata(i).herstName & "'"))
+    End If
+'7.######################################## tblKraftstoff #################################################
+    If kraftID = 0 Then
+     sSQL = "INSERT INTO tblKraftstoff (Kraftstoffart ) VALUES ('" & FzgModellXLSXdata(i).kraftstoff & "');"
+        DoCmd.RunSQL sSQL
+     kraftID = Nz(DLookup("KraftID", "tblKraftstoff", "Kraftstoffart= '" & FzgModellXLSXdata(i).kraftstoff & "'"))
+    End If
+
+'8.######################################## tblFzgModell #################################################
+     ' Abteilungskuerzel mit den Schlüsselwerten in Variablen ersetzen
+    If fzgModellID = 0 Then
+         sSQL = "INSERT INTO tblFzgModell (KraftID, HerstID, ModellTyp, ModellNr) " & _
+         "VALUES(" & kraftID & "," & herstID & ",'" & FzgModellXLSXdata(i).modellName & "', '" & _
+         FzgModellXLSXdata(i).modellBzg & "');"
+        Debug.Print sSQL
+        DoCmd.RunSQL sSQL
+        fzgModellID = Nz(DLookup("FzgModellID", "tblFzgModell", "ModellNr= '" & FzgModellXLSXdata(i).modellBzg & "'"))
+        'in diesem Fall werden alle Fzg mit dem gleichen ModellBzg nicht gespeichert. Eine Möglichkeit, um das zu ändern und einfach alles Daten einfügen?
+    End If
+'9######################################## tblFzg #################################################
+    If fzgID = 0 Then
+         sSQL = "INSERT INTO tblFzg (StatusID, FzgModellID, FahrgestellNr, GrundPreis, Austattungwert) " & _
+         "VALUES(" & statusID & ", " & fzgModellID & ",'" & FzgXLSXdata(i).fin & "', " & _
+         Str(FzgXLSXdata(i).grundPreis) & " , " & Str(FzgXLSXdata(i).austattungWert) & " );"
+        Debug.Print sSQL
+        DoCmd.RunSQL sSQL
+        fzgID = Nz(DLookup("FzgID", "tblFzg", "FahrgestellNr= '" & FzgXLSXdata(i).fin & "'"))
+    End If
+
+'10 ###################################tblVerknuepftMit_FzgGrp ######################################
+    
+    If IsNull(DLookup("MitID", "tblVerknuepftMit_FzgGrp", "MitID=" & mitId & " AND FzgGrpID= " & dwgrpID)) Then
+        sSQL = "INSERT INTO tblVerknuepftMit_FzgGrp (MitID,FzgGrpID,Datum) VALUES (" _
+        & mitId & "," & dwgrpID & ", '#" & Date & "#');"
+        Debug.Print sSQL
+        DoCmd.RunSQL sSQL
+    End If
+
+'11.######################################## tblBestellung#################################################
+    bestellID = Nz(DLookup("BestellID", "tblBestellung", "BestellNr = '" & BestellungXLSXdata(i).bestellNr & "'"), 0)
+    
+    If bestellID = 0 Then
+        sSQL = "INSERT INTO tblBestellung  (BestellNr, MitID, FzgID, BestellDat , Kraftfahrzeugbriefnummer, AnlieferungDat, Rechnungsdatum )" & _
+        "VALUES ('" & BestellungXLSXdata(i).bestellNr & "'," & mitId & "," & fzgID & ",'" & _
+        BestellungXLSXdata(i).bestelldat & "', '" & BestellungXLSXdata(i).kfzbrief & "','" & _
+        BestellungXLSXdata(i).anlieferungDat & "','" & BestellungXLSXdata(i).rechnungDat & "');"
+        Debug.Print sSQL
+        DoCmd.RunSQL sSQL
+                
+        bestellID = Nz(DLookup("BestellID", "tblBestellung", "BestellNr= '" & BestellungXLSXdata(i).bestellNr & "'"))
+'    Else
+'        sSQL = "UPDATE tblBestellung SET (" & _
+'            " BestellNr = '" & FzgXLSXdata(i).bestellNr & "'" & _
+'            ",BestellDat='" & FzgXLSXdata(i).bestelldat & "'" & _
+'            ",Kraftfahrzeugbriefnummer='" & FzgXLSXdata(i).kfzbrief & "'" & _
+'            ",AnlieferungDat = '" & FzgXLSXdata(i).anlieferungDat & "'" & _
+'            ",Rechnungsdatum = '" & FzgXLSXdata(i).rechnungDat & "') WHERE BestellID = " & bestellID & ";"
+'        DoCmd.RunSQL sSQL ' need a where statement
+    End If
+
+'7######################################## tblLeasingV #################################################
+'     leasID = Nz(DLookup("LeasID", "tblLeasingV", "MitID = " & mitId & " AND fzgID = " & fzgID), 0)
+'    Else
+
+         leasID = Nz(DLookup("LeasID", "tblLeasingV", "LeasNr = '" & LeasingXLSXdata(i).leasingNr & "'"), 0)
+         
+        If leasID = 0 And LeasingXLSXdata(i).leasingNr <> "" Then
+             sSQL = "INSERT INTO tblLeasingV (MitID, FzgID, LeasNr, Kennzeichen, Haltedauer, [Netto Leasingrate], [DL Leasingrate], [T AuslDat], ErstzulassungDat, AbmeldeDat, RueckgabeDat, Vertragsende, KmStand ) " & _
+             "VALUES(" & mitId & "," & fzgID & ",'" & LeasingXLSXdata(i).leasingNr & "','" & LeasingXLSXdata(i).kennzeichen & "'," & _
+             LeasingXLSXdata(i).vertragsdauer & "," & Str(LeasingXLSXdata(i).netLeasingrate) & "," & Str(LeasingXLSXdata(i).dLLeasingRate) & ",'" _
+             & LeasingXLSXdata(i).auslieferungDat & "', '" & LeasingXLSXdata(i).datEz & "','" & LeasingXLSXdata(i).abmeldeDat & "', '" _
+            & LeasingXLSXdata(i).rueckgabeDat & "', '" & LeasingXLSXdata(i).vertragsende & "', " & LeasingXLSXdata(i).kmStand & ");"
+            
+            Debug.Print sSQL
+            DoCmd.RunSQL sSQL
+            leasID = Nz(DLookup("LeasID", "tblLeasingV", "LeasNr= '" & LeasingXLSXdata(i).leasingNr & "'"))
+        End If
+
+
+
+
+   
+'7######################################## tblVerkaufV #################################################
+    
+    vkID = Nz(DLookup("VkID", "tblVerkaufV", " FzgID = " & fzgID))
+    
+    If vkID = 0 And VerkaufXLSXdata(i).uebernahmeDat > 0 Then
+         sSQL = "INSERT INTO tblVerkaufV (FzgID, HofNr, KmStand, UebernahmeDat, VerkaufsDat, Verkaufspreis, Schäden) " & _
+         "VALUES(" & fzgID & ", '" & VerkaufXLSXdata(i).hofNr & "'," & VerkaufXLSXdata(i).kmStand & ", '" & _
+         VerkaufXLSXdata(i).uebernahmeDat & "' , '" & VerkaufXLSXdata(i).verkaufDat & "'," & Str(VerkaufXLSXdata(i).verkPreis) & " , " _
+        & Str(VerkaufXLSXdata(i).schaeden) & ");"
+        
+        Debug.Print sSQL
+        DoCmd.RunSQL sSQL
+        vkID = Nz(DLookup("VkID", "tblVerkaufV", " FzgID = " & fzgID))
+        
+    End If
+
+''7######################################## tblModellTyp_Kraftstoff #################################################
+'
+'    If modKrafID = 0 Then
+'        sSQL = "INSERT INTO tblModellTyp_Kraftstoff (ModBz, KraftNr) " & _
+'        "VALUES (" & FzgXLSXdata(i).modellBzg & ", " & FzgXLSXdata(i).kraftstoffNr & ");"
+'        Debug.Print sSQL
+'        DoCmd.RunSQL sSQL
+'    End If
+DoCmd.SetWarnings True
+Next i
+'###############################Feststellungen und Vorschläge ################################################
+ 
+End Sub
+Private Sub CloseXLSXApp(bShowInfo As Boolean)
+''' Excel-Instanz beenden
+' Verweis auf Excel-Bibliothek muss gesetzt sein
+Dim xlsApp As Excel.Application
+Dim MsgAntw As Integer
+' Excel-Instanz suchen
+  On Error Resume Next
+    Set xlsApp = GetObject(, "Excel.Aplication")
+    If xlsApp Is Nothing Then
+        ' keine Excel-Instanz vorhanden
+        ' Meldung
+        If bShowInfo Then
+            MsgAntw = MsgBox("Es wurde keine Excel-Instanz gefunden.", vbInformation, "Excel-Instanz beenden")
+        End If
+        ' Ende
+        Exit Sub
+    End If
+On Error GoTo 0
+    ' Excel schließen und resetten
+    xlsApp.Quit
+    Set xlsApp = Nothing
+    ' Meldung
+    If bShowInfo Then
+        MsgAntw = MsgBox("Die Excel-Instanz wurde beendet.", vbInformation, "Excel-Instanz beenden")
+    End If
+End Sub
+
+
+
+
